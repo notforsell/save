@@ -1,0 +1,186 @@
+#include <iostream> 
+using namespace std; 
+// Node structure for AVL Tree 
+struct Node { 
+int player_id; 
+int score; 
+int height; 
+Node* left; 
+Node* right; 
+Node(int id, int sc) : player_id(id), score(sc), height(1), left(nullptr), right(nullptr) {} 
+}; 
+// AVL Tree class 
+class AVLTree { 
+private: 
+Node* root; 
+int getHeight(Node* node) { 
+return node ? node->height : 0; 
+} 
+int getBalanceFactor(Node* node) { 
+return node ? getHeight(node->left) - getHeight(node->right) : 0; 
+} 
+Node* rotateRight(Node* y) { 
+Node* x = y->left; 
+Node* T2 = x->right; 
+x->right = y; 
+y->left = T2; 
+y->height = max(getHeight(y->left), getHeight(y->right)) + 1; 
+x->height = max(getHeight(x->left), getHeight(x->right)) + 1; 
+ 
+        return x; 
+    } 
+ 
+    Node* rotateLeft(Node* x) { 
+        Node* y = x->right; 
+        Node* T2 = y->left; 
+ 
+        y->left = x; 
+        x->right = T2; 
+ 
+        x->height = max(getHeight(x->left), getHeight(x->right)) + 1; 
+        y->height = max(getHeight(y->left), getHeight(y->right)) + 1; 
+ 
+        return y; 
+    } 
+ 
+    Node* insert(Node* node, int player_id, int score) { 
+        if (!node) return new Node(player_id, score); 
+ 
+        if (player_id < node->player_id) 
+            node->left = insert(node->left, player_id, score); 
+        else if (player_id > node->player_id) 
+            node->right = insert(node->right, player_id, score); 
+        else { 
+            cout << "Player ID already exists.\n"; 
+            return node; 
+        } 
+ 
+        node->height = max(getHeight(node->left), getHeight(node->right)) + 1; 
+        int balance = getBalanceFactor(node); 
+ 
+        if (balance > 1 && player_id < node->left->player_id) 
+            return rotateRight(node); 
+ 
+        if (balance < -1 && player_id > node->right->player_id) 
+            return rotateLeft(node); 
+ 
+        if (balance > 1 && player_id > node->left->player_id) { 
+            node->left = rotateLeft(node->left); 
+            return rotateRight(node); 
+        } 
+ 
+        if (balance < -1 && player_id < node->right->player_id) { 
+            node->right = rotateRight(node->right); 
+            return rotateLeft(node); 
+        } 
+ 
+        return node; 
+    } 
+ 
+    Node* findMin(Node* node) { 
+        while (node->left) node = node->left; 
+        return node; 
+    } 
+ 
+    Node* remove(Node* node, int player_id) { 
+        if (!node) return nullptr; 
+ 
+        if (player_id < node->player_id) 
+            node->left = remove(node->left, player_id); 
+        else if (player_id > node->player_id) 
+            node->right = remove(node->right, player_id); 
+        else { 
+            if (!node->left || !node->right) { 
+                Node* temp = node->left ? node->left : node->right; 
+                delete node; 
+                return temp; 
+            } 
+ 
+            Node* temp = findMin(node->right); 
+            node->player_id = temp->player_id; 
+            node->score = temp->score; 
+            node->right = remove(node->right, temp->player_id); 
+        } 
+ 
+        if (!node) return nullptr; 
+ 
+        node->height = max(getHeight(node->left), getHeight(node->right)) + 1; 
+        int balance = getBalanceFactor(node); 
+ 
+        if (balance > 1 && getBalanceFactor(node->left) >= 0) 
+            return rotateRight(node); 
+ 
+        if (balance > 1 && getBalanceFactor(node->left) < 0) { 
+            node->left = rotateLeft(node->left); 
+            return rotateRight(node); 
+        } 
+ 
+        if (balance < -1 && getBalanceFactor(node->right) <= 0) 
+            return rotateLeft(node); 
+ 
+        if (balance < -1 && getBalanceFactor(node->right) > 0) { 
+            node->right = rotateRight(node->right); 
+            return rotateLeft(node); 
+        } 
+ 
+        return node; 
+    } 
+ 
+    void inorder(Node* node) { 
+        if (node) { 
+            inorder(node->left); 
+            cout << "Player ID: " << node->player_id << ", Score: " << node->score << endl; 
+            inorder(node->right); 
+        } 
+    } 
+ 
+public: 
+    AVLTree() : root(nullptr) {} 
+ 
+    void registerPlayer(int player_id, int score) { 
+        root = insert(root, player_id, score); 
+    } 
+ 
+    void displayLeaderboard() { 
+        cout << "Leaderboard (Inorder Traversal):\n"; 
+        inorder(root); 
+    } 
+ 
+    void removePlayer(int player_id) { 
+        root = remove(root, player_id); 
+    } 
+}; 
+ 
+// Main function 
+int main() { 
+    AVLTree game; 
+    int choice, player_id, score; 
+ 
+    do { 
+        cout << "\n1. Register Player\n2. Display Leaderboard\n3. Remove Player\n4. Exit\n"; 
+        cout << "Enter your choice: "; 
+        cin >> choice; 
+ 
+        switch (choice) { 
+            case 1: 
+                cout << "Enter Player ID and Score: "; 
+                cin >> player_id >> score; 
+                game.registerPlayer(player_id, score); 
+                break; 
+            case 2: 
+                game.displayLeaderboard(); 
+                break; 
+            case 3: 
+                cout << "Enter Player ID to remove: "; 
+                cin >> player_id; 
+                game.removePlayer(player_id); 
+                break; 
+            case 4: 
+                cout << "Exiting...\n"; 
+                break; 
+            default: 
+                cout << "Invalid choice. Try again.\n"; 
+        } 
+    } while (choice != 4); 
+return 0; 
+} 
