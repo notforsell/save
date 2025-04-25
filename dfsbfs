@@ -1,0 +1,173 @@
+#include<iostream>
+#include<string>
+using namespace std;
+
+#define MAX 100
+
+class queue {
+    int rear;
+    int front;
+    int arr[MAX];
+
+public:
+    queue() {
+        front = rear = -1;
+    }
+
+    void enqueue(int val) {
+        if (rear == 99) {
+            cout << "Queue Overflow" << endl;
+        } else {
+            if (front == -1) {
+                front = 0;
+            }
+            arr[++rear] = val;
+        }
+    }
+
+    int dequeue() {
+        if (front == -1 || front > rear) {
+            cout << "Queue Empty" << endl;
+            return -1;
+        } else {
+            return arr[front++];
+        }
+    }
+
+    bool isempty() {
+        return (front == -1 || front > rear);
+    }
+};
+
+struct adjlistnode {
+    int dest;
+    struct adjlistnode *next;
+};
+
+struct adjlist {
+    struct adjlistnode *head;
+};
+
+class graph {
+    int v;
+    struct adjlist *total;
+    int *visitedarray;
+
+public:
+    graph(int vertices) {
+        v = vertices;
+        total = new adjlist[v];
+        visitedarray = new int[v];
+        for (int i = 0; i < v; i++) {
+            total[i].head = NULL;
+            visitedarray[i] = 0;
+        }
+    }
+
+    void addEdge(int src, int dest) {
+        struct adjlistnode* newnode = new adjlistnode;
+        newnode->dest = dest;
+        newnode->next = NULL;
+
+        struct adjlistnode* temp = total[src].head;
+        if (temp == NULL) {
+            total[src].head = newnode;
+        } else {
+            while (temp->next != NULL) {
+                temp = temp->next;
+            }
+            temp->next = newnode;
+        }
+
+        struct adjlistnode* nn2 = new adjlistnode;
+        nn2->dest = src;
+        nn2->next = NULL;
+        temp = total[dest].head;
+        if (temp == NULL) {
+            total[dest].head = nn2;
+        } else {
+            while (temp->next != NULL) {
+                temp = temp->next;
+            }
+            temp->next = nn2;
+        }
+    }
+
+    void printadjlist() {
+        cout << "Adjacency List is as Follows:" << endl;
+        for (int i = 0; i < v; i++) {
+            cout << i;
+            struct adjlistnode* temp = total[i].head;
+            while (temp != NULL) {
+                cout << "->" << temp->dest;
+                temp = temp->next;
+            }
+            cout << endl;
+        }
+    }
+
+    void bfs(int start) {
+        queue q;
+        int visited[v] = {0};
+
+        q.enqueue(start);
+        visited[start] = 1;
+
+        while (!q.isempty()) {
+            int vertexres = q.dequeue();
+            cout << vertexres << " ";
+
+            adjlistnode* temp = total[vertexres].head;
+            while (temp != NULL) {
+                if (visited[temp->dest] == 0) {
+                    q.enqueue(temp->dest);
+                    visited[temp->dest] = 1;
+                }
+                temp = temp->next;
+            }
+        }
+        cout << endl;
+    }
+
+    void dfs(int v) {
+        cout << v << " ";
+        visitedarray[v] = 1;
+        adjlistnode* temp = total[v].head;
+        while (temp != NULL) {
+            if (visitedarray[temp->dest] == 0) {
+                dfs(temp->dest);
+            }
+            temp = temp->next;
+        }
+    }
+};
+
+int main() {
+    int n, startpoint, src, dest;
+    cout << "Enter the number of vertices for graph:";
+    cin >> n;
+    graph g(n);
+
+    for (int i = 0; i < n; i++) {
+        cout << "Enter the Source: ";
+        cin >> src;
+        cout << "Enter the Destination: ";
+        cin >> dest;
+        g.addEdge(src, dest);
+    }
+
+    cout << "Adjacency List" << endl;
+    g.printadjlist();
+
+    cout << "Breadth First Search" << endl;
+    cout << "Enter start point: ";
+    cin >> startpoint;
+    g.bfs(startpoint);
+
+    cout << "Depth First Search" << endl;
+    cout << "Enter start point: ";
+    cin >> startpoint;
+    g.dfs(startpoint);
+
+    return 0;
+}
