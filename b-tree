@@ -1,0 +1,265 @@
+#include <iostream>
+#include <queue>
+using namespace std;
+
+const int ORDER = 3; // B-Tree of order 3
+
+class BTreeNode {
+public:
+    int keys[ORDER - 1];
+    BTreeNode* children[ORDER];
+    int keyCount;
+    bool isLeaf;
+
+    BTreeNode(bool leaf) {
+        isLeaf = leaf;
+        keyCount = 0;
+        for (int i = 0; i < ORDER; i++)
+            children[i] = nullptr;
+    }
+};
+
+class BTree {
+private:
+    BTreeNode* root;
+
+    void insertNonFull(BTreeNode* node, int key);
+    void splitChild(BTreeNode* parent, int i, BTreeNode* child);
+    void levelOrderTraversal(BTreeNode* node);
+    BTreeNode* remove(BTreeNode* node, int key);
+    void fill(BTreeNode* node, int idx);
+    int getPredecessor(BTreeNode* node, int idx);
+    int getSuccessor(BTreeNode* node, int idx);
+    void merge(BTreeNode* node, int idx);
+
+public:
+    BTree() { root = nullptr; }
+    void insert(int key);
+    void levelOrderDisplay() { if (root) levelOrderTraversal(root); }
+    void deleteKey(int key) { root = remove(root, key); }
+};
+
+void BTree::insert(int key) {
+    if (!root) {
+        root = new BTreeNode(true);
+        root->keys[0] = key;
+        root->keyCount = 1;
+        return;
+    }
+    if (root->keyCount == ORDER - 1) {
+        BTreeNode* newRoot = new BTreeNode(false);
+        newRoot->children[0] = root;
+        splitChild(newRoot, 0, root);
+        int i = (newRoot->keys[0] < key) ? 1 : 0;
+        insertNonFull(newRoot->children[i], key);
+        root = newRoot;
+    } else {
+        insertNonFull(root, key);
+    }
+}
+
+void BTree::insertNonFull(BTreeNode* node, int key) {
+    int i = node->keyCount - 1;
+    if (node->isLeaf) {
+        while (i >= 0 && node->keys[i] > key) {
+            node->keys[i + 1] = node->keys[i];
+            i--;
+        }
+        node->keys[i + 1] = key;
+        node->keyCount++;
+    } else {
+        while (i >= 0 && node->keys[i] > key)
+            i--;
+        i++;
+        if (node->children[i]->keyCount == ORDER - 1) {
+            splitChild(node, i, node->children[i]);
+            if (node->keys[i] < key)
+                i++;
+        }
+        insertNonFull(node->children[i], key);
+    }
+}
+
+void BTree::splitChild(BTreeNode* parent, int i, BTreeNode* child) {
+    BTreeNode* newChild = new BTreeNode(child->isLeaf);
+    newChild->keyCount = ORDER / 2 - 1;
+
+    for (int j = 0; j < newChild->keyCount; j++)
+        newChild->keys[j] = child->keys[j + 2];
+
+    if (!child->isLeaf) {
+        for (int j = 0; j < newChild->keyCount + 1; j++)
+            newChild->children[j] = child->children[j + 2];
+    }
+
+    child->keyCount = 1;
+
+    for (int j = parent->keyCount; j > i; j--)
+        parent->children[j + 1] = parent->children[j];
+    parent->children[i + 1] = newChild;
+
+    for (int j = parent->keyCount - 1; j >= i; j--)
+        parent->keys[j + 1] = parent->keys[j];
+    parent->keys[i] = child->keys[1];
+    parent->keyCount++;
+}
+
+void BTree::levelOrderTraversal(BTreeNode* node) {
+    if (!node) return;
+    queue<BTreeNode*> q;
+    q.push(node);
+    while (!q.empty()) {
+        int levelSize = q.size();
+        for (int i = 0; i < levelSize; i++) {
+            BTreeNode* temp = q.front(); q.pop();
+            for (int j = 0; j < temp->keyCount; j++)
+                cout << temp->keys[j] << " ";
+            if (!temp->isLeaf) {
+                for (int j = 0; j <= temp->keyCount; j++) {
+                    if (temp->children[j])
+                        q.push(temp->children[j]);
+                }
+            }
+        }
+        cout << "| ";
+    }
+}
+
+BTreeNode* BTree::remove(BTreeNode* node, int key) {
+    if (!node) return nullptr;
+    int idx = 0;
+    while (idx < node->keyCount && node->keys[idx] < key) idx++;
+
+    if (idx < node->keyCount && node->keys[idx] == key) {
+        if (node->isLeaf) {
+            for (int j = idx; j < node->keyCount - 1; j++)
+                node->keys[j] = node->keys[j + 1];
+            node->keyCount--;
+        } else {
+            int pred = getPredecessor(node, idx);
+            node->keys[idx] = pred;
+            node->children[idx]->keyCount--;
+        }
+    } else {
+        if (node->isLeaf) {
+            cout << "The key " << key << " does not exist in the tree.\n";
+            return node;
+        }
+        bool isLastChild = (idx == node->keyCount);
+        if (node->children[idx]->keyCount < ORDER / 2) {
+            fill(node, idx);
+        }
+        if (isLastChild && idx > node->keyCount)
+            node->children[idx - 1] = remove(node->children[idx - 1], key);
+        else
+            node->children[idx] = remove(node->children[idx], key);
+    }
+    return node;
+}
+
+void BTree::fill(BTreeNode* node, int idx) {
+    if (idx != 0 && node->children[idx - 1]->keyCount >= ORDER / 2) {
+        BTreeNode* child = node->children[idx];
+        BTreeNode* sibling = node->children[idx - 1];
+        for (int i = child->keyCount - 1; i >= 0; i--)
+            child->keys[i + 1] = child->keys[i];
+        if (!child->isLeaf) {
+            for (int i = child->keyCount; i >= 0; i--)
+                child->children[i + 1] = child->children[i];
+        }
+        child->keys[0] = node->keys[idx - 1];
+        child->keyCount++;
+        node->keys[idx - 1] = sibling->keys[sibling->keyCount - 1];
+        sibling->keyCount--;
+    } else if (idx != node->keyCount && node->children[idx + 1]->keyCount >= ORDER / 2) {
+        BTreeNode* child = node->children[idx];
+        BTreeNode* sibling = node->children[idx + 1];
+        child->keys[child->keyCount] = node->keys[idx];
+        node->keys[idx] = sibling->keys[0];
+        child->keyCount++;
+        for (int i = 1; i < sibling->keyCount; i++)
+            sibling->keys[i - 1] = sibling->keys[i];
+        if (!child->isLeaf) {
+            child->children[child->keyCount] = sibling->children[0];
+            for (int i = 0; i <= sibling->keyCount; i++)
+                sibling->children[i] = sibling->children[i + 1];
+        }
+        sibling->keyCount--;
+    } else {
+        if (idx != node->keyCount) {
+            merge(node, idx);
+        } else {
+            merge(node, idx - 1);
+        }
+    }
+}
+
+void BTree::merge(BTreeNode* node, int idx) {
+    BTreeNode* child = node->children[idx];
+    BTreeNode* sibling = node->children[idx + 1];
+
+    child->keys[child->keyCount] = node->keys[idx];
+    for (int i = 0; i < sibling->keyCount; i++)
+        child->keys[i + child->keyCount + 1] = sibling->keys[i];
+
+    if (!child->isLeaf) {
+        for (int i = 0; i <= sibling->keyCount; i++)
+            child->children[i + child->keyCount + 1] = sibling->children[i];
+    }
+
+    child->keyCount += sibling->keyCount + 1;
+
+    for (int i = idx + 1; i < node->keyCount; i++)
+        node->keys[i - 1] = node->keys[i];
+    for (int i = idx + 2; i <= node->keyCount; i++)
+        node->children[i - 1] = node->children[i];
+
+    node->keyCount--;
+    delete sibling;
+}
+
+int BTree::getPredecessor(BTreeNode* node, int idx) {
+    BTreeNode* current = node->children[idx];
+    while (!current->isLeaf) {
+        current = current->children[current->keyCount];
+    }
+    return current->keys[current->keyCount - 1];
+}
+
+int BTree::getSuccessor(BTreeNode* node, int idx) {
+    BTreeNode* current = node->children[idx + 1];
+    while (!current->isLeaf) {
+        current = current->children[0];
+    }
+    return current->keys[0];
+}
+
+int main() {
+    BTree btree;
+    int choice, key;
+    while (true) {
+        cout << "\n1. Insert\n2. Level Order Display\n3. Delete\n4. Exit\nEnter choice: ";
+        cin >> choice;
+        switch (choice) {
+            case 1:
+                cout << "Enter key to insert: ";
+                cin >> key;
+                btree.insert(key);
+                break;
+            case 2:
+                cout << "Level order traversal: \n";
+                btree.levelOrderDisplay();
+                cout << "\n";
+                break;
+            case 3:
+                cout << "Enter key to delete: ";
+                cin >> key;
+                btree.deleteKey(key);
+                break;
+            case 4:
+                return 0;
+            default:
+                cout << "Invalid choice. Try again.";
+        }
+    }
+}
