@@ -1,0 +1,98 @@
+#include <iostream>
+using namespace std;
+
+enum Color { RED, BLACK };
+
+struct Directory {
+    string name;
+    Directory* left;
+    Directory* right;
+    Directory* parent;
+    Color color;
+
+    Directory(string dirName) {
+        name = dirName;
+        left = right = parent = nullptr;
+        color = RED; // Not used currently, but reserved for Red-Black Tree logic
+    }
+};
+
+class FileSystem {
+    Directory* root;
+
+    void inOrderDisplay(Directory* node) {
+        if (!node) return;
+        inOrderDisplay(node->left);
+        cout << node->name << " ";
+        inOrderDisplay(node->right);
+    }
+
+public:
+    FileSystem() {
+        root = nullptr;
+    }
+
+    void addDirectory(string name) {
+        Directory* newDir = new Directory(name);
+
+        if (!root) {
+            root = newDir;
+            root->color = BLACK; // Root is always black in Red-Black Tree
+            return;
+        }
+
+        Directory* current = root;
+        Directory* parent = nullptr;
+
+        while (current) {
+            parent = current;
+            if (name < current->name)
+                current = current->left;
+            else
+                current = current->right;
+        }
+
+        newDir->parent = parent;
+
+        if (name < parent->name)
+            parent->left = newDir;
+        else
+            parent->right = newDir;
+    }
+
+    void showDirectories() {
+        cout << "Directories in sorted order: ";
+        inOrderDisplay(root);
+        cout << endl;
+    }
+};
+
+int main() {
+    FileSystem fs;
+    int choice;
+    string dir;
+
+    while (true) {
+        cout << "\nMenu:\n";
+        cout << "1. Add Directory\n";
+        cout << "2. Show Directories\n";
+        cout << "3. Exit\n";
+        cout << "Enter choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1:
+                cout << "Enter directory name: ";
+                cin >> dir;
+                fs.addDirectory(dir);
+                break;
+            case 2:
+                fs.showDirectories();
+                break;
+            case 3:
+                return 0;
+            default:
+                cout << "Invalid choice, try again!\n";
+        }
+    }
+}
