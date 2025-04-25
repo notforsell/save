@@ -1,0 +1,85 @@
+#include <iostream> 
+using namespace std; 
+
+const int MAX = 100; // Adjust as needed 
+const int INF = 1e9; // Large value instead of INT_MAX 
+ 
+struct Edge { 
+    int vertex, weight; 
+}; 
+ 
+int adj[MAX][MAX]; // Adjacency matrix to store weights 
+int dist[MAX]; // Distance array 
+bool visited[MAX]; // To track visited nodes9 
+ 
+void addEdge(int u, int v, int wt) { 
+    adj[u][v] = wt; 
+    adj[v][u] = wt; 
+} 
+ 
+int getMinVertex(int V) { 
+    int minDist = INF, minVertex = -1; 
+    for (int i = 0; i < V; i++) { 
+        if (!visited[i] && dist[i] < minDist) { 
+            minDist = dist[i]; 
+            minVertex = i; 
+        } 
+    } 
+    return minVertex; 
+} 
+ 
+void shortestPath(int V, int src) { 
+    // Initialize distance and visited arrays 
+    for (int i = 0; i < V; i++) { 
+        dist[i] = INF; 
+        visited[i] = false; 
+    } 
+ 
+    dist[src] = 0; 
+ 
+    for (int count = 0; count < V - 1; count++) { 
+        int u = getMinVertex(V); 
+        if (u == -1) break; 
+        visited[u] = true; 
+ 
+        for (int v = 0; v < V; v++) { 
+            if (adj[u][v] && !visited[v] && dist[u] + adj[u][v] < dist[v]) { 
+                dist[v] = dist[u] + adj[u][v]; 
+            } 
+        } 
+    } 
+ 
+    cout << "Vertex \tDistance from Source\n"; 
+    for (int i = 0; i < V; ++i) { 
+        cout << i << "\t\t" << dist[i] << "\n"; 
+    } 
+} 
+ 
+int main() { 
+    int loc, rout; 
+    cout << "Enter the number of locations: "; 
+    cin >> loc; 
+ 
+    // Initialize adjacency matrix 
+    for (int i = 0; i < loc; i++) { 
+        for (int j = 0; j < loc; j++) { 
+            adj[i][j] = (i == j) ? 0 : INF; 
+        } 
+    } 
+ 
+    cout << "Enter the number of routes: "; 
+    cin >> rout; 
+    cout << "Enter the route in format (source, destination, distance):\n"; 
+ 
+    for (int i = 0; i < rout; i++) { 
+        int s, d, w; 
+        cin >> s >> d >> w; 
+        addEdge(s, d, w); 
+    } 
+
+    int src; 
+    cout << "Enter source location: "; 
+    cin >> src; 
+    shortestPath(loc, src); 
+    return 0; 
+}
